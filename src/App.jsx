@@ -41,12 +41,11 @@ function App() {
       <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-md border-b border-indigo-500/20">
         <div className="max-w-7xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-600/30 p-2.5 rounded-xl border border-indigo-400/30 backdrop-blur-sm">
-              <GraduationCap className="h-8 w-8 text-indigo-400" />
+            <div className="bg-indigo-600/10 p-1.5 rounded-xl border border-indigo-400/20 backdrop-blur-sm flex items-center justify-center">
+              <img src="https://success0.com.np/logo.png" className="h-10 w-10 object-contain rounded-lg" alt="Logo" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Anisha <span className="text-indigo-400 font-medium">Course Matcher Pro</span></h1>
-              <p className="text-xs text-slate-400 font-light mt-0.5">Local Institutional Database & Student Evaluation System</p>
+              <h1 className="text-2xl font-bold tracking-tight">Course</h1>
             </div>
           </div>
           
