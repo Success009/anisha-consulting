@@ -61,6 +61,9 @@ export const getEduTier = (value) => {
     }
   }
 
+
   // If no match, return a default low tier or indicate unrecognized
   return 1; // Default to Tier 1 for unrecognized, to allow some flexibility
 };
+
+export const TEST_NAMES = ["IELTS", "PTE", "TOEFL", "DUOLINGO", "MOI"];

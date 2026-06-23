@@ -87,11 +87,13 @@ export const evaluateAndRankCourses = (courses, studentProfile) => {
         let matchedTestLabel = "";
 
         for (const reqTest of courseTests) {
-          const studentTest = (test_results || [ ]).find(t => t.test_name.toLowerCase() === reqTest.test_name.toLowerCase());
+          if (!reqTest || !reqTest.test_name) continue;
+          const reqTestName = reqTest.test_name.trim().toUpperCase();
+          const studentTest = (test_results || [ ]).find(t => t && t.test_name && t.test_name.trim().toUpperCase() === reqTestName);
 
           // Handle Medium of Instruction (MOI) option
-          if (reqTest.test_name === 'MOI') {
-            const hasMoi = (test_results || [ ]).some(t => t.test_name === 'MOI');
+          if (reqTestName === 'MOI') {
+            const hasMoi = (test_results || [ ]).some(t => t && t.test_name && t.test_name.trim().toUpperCase() === 'MOI');
             if (hasMoi) {
               testMatched = true;
               const moiBoost = 30;
@@ -110,9 +112,9 @@ export const evaluateAndRankCourses = (courses, studentProfile) => {
               
               const diff = stdScore - reqScore;
               let scaleBonus = 0;
-              if (reqTest.test_name === 'IELTS') {
+              if (reqTestName === 'IELTS') {
                 scaleBonus = Math.floor(diff / 0.5) * 5;
-              } else if (['PTE', 'DUOLINGO', 'TOEFL'].includes(reqTest.test_name)) {
+              } else if (['PTE', 'DUOLINGO', 'TOEFL'].includes(reqTestName)) {
                 scaleBonus = Math.floor(diff / 5) * 5;
               }
               
