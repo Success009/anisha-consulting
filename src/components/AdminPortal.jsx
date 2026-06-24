@@ -13,11 +13,13 @@ import AutocompleteInput from './AutocompleteInput';
 import { ref, push, set, remove } from 'firebase/database';
 import { db } from '../firebase';
 
+
 export default function AdminPortal({ courses }) {
   const [courseForm, setCourseForm] = useState({
     university_name: '',
     country: '',
     course_name: '',
+    course_names: [ ],
     course_level: '',
     minimum_education_level: '',
     minimum_gpa: '',
@@ -39,6 +41,33 @@ export default function AdminPortal({ courses }) {
       ...courses.flatMap(c => c.proficiency_tests || [ ]).map(t => t && t.test_name).filter(Boolean)
     ])
   );
+
+  // Add Course Name to packet list
+  const addCourseName = () => {
+    if (!courseForm.course_name) return;
+    const trimmed = courseForm.course_name.trim();
+    if (!trimmed) return;
+
+    // Check if it already exists in the packet list to avoid duplicates
+    if ((courseForm.course_names || [ ]).includes(trimmed)) {
+      alert("This course name is already in your packet list.");
+      return;
+    }
+
+    setCourseForm(prev => ({
+      ...prev,
+      course_names: [...(prev.course_names || [ ]), trimmed],
+      course_name: '' // Clear input so they can type another
+    }));
+  };
+
+  // Remove Course Name from packet list
+  const removeCourseName = (idx) => {
+    setCourseForm(prev => ({
+      ...prev,
+      course_names: (prev.course_names || [ ]).filter((_, i) => i !== idx)
+    }));
+  };
 
   // Add Proficiency Test requirement to local form state
   const addTestRequirement = () => {
@@ -66,6 +95,7 @@ export default function AdminPortal({ courses }) {
       university_name: course.university_name || '',
       country: course.country || '',
       course_name: course.course_name || '',
+      course_names: course.course_names || (course.course_name ? [course.course_name] : [ ]),
       course_level: course.course_level || '',
       minimum_education_level: course.minimum_education_level || '',
       minimum_gpa: course.minimum_gpa !== undefined ? String(course.minimum_gpa) : '',
@@ -84,6 +114,7 @@ export default function AdminPortal({ courses }) {
       university_name: '',
       country: '',
       course_name: '',
+      course_names: [ ],
       course_level: '',
       minimum_education_level: '',
       minimum_gpa: '',
@@ -101,6 +132,7 @@ export default function AdminPortal({ courses }) {
       university_name, 
       country, 
       course_name, 
+      course_names,
       course_level, 
       minimum_education_level, 
       minimum_gpa, 
@@ -110,41 +142,80 @@ export default function AdminPortal({ courses }) {
       proficiency_tests 
     } = courseForm;
 
-    if (!university_name || !country || !course_name || !course_level || !minimum_education_level) {
-      alert("Please complete all essential fields including Course Level and Minimum Education Level.");
+    // Collect all course names to save
+    let namesToSave = [...(course_names || [ ])];
+    if (course_name && course_name.trim()) {
+      namesToSave.push(course_name.trim());
+    }
+    // Remove duplicates & empty entries
+    namesToSave = Array.from(new Set(namesToSave.map(n => n.trim()).filter(Boolean)));
+
+    if (!university_name || !country || namesToSave.length === 0 || !course_level || !minimum_education_level) {
+      alert("Please complete all essential fields including Course Name, Course Level and Minimum Education Level.");
       return;
     }
 
     try {
-      const coursesRef = ref(db, 'anisha/courses');
-      const payload = {
-        university_name: university_name.trim(),
-        country: country.trim(),
-        course_name: course_name.trim(),
-        course_level: course_level.trim(),
-        minimum_education_level: minimum_education_level.trim(),
-        minimum_gpa: parseFloat(minimum_gpa) || 0,
-        duration: duration.trim(),
-        course_fee: course_fee.trim(),
-        intake_periods: intake_periods.trim(),
-        proficiency_tests: proficiency_tests || [ ]
-      };
-
       if (editingCourseId) {
+        // When editing, we update the main course name being edited with the first name
+        const payload = {
+          university_name: university_name.trim(),
+          country: country.trim(),
+          course_name: namesToSave[0],
+          course_level: course_level.trim(),
+          minimum_education_level: minimum_education_level.trim(),
+          minimum_gpa: parseFloat(minimum_gpa) || 0,
+          duration: duration.trim(),
+          course_fee: course_fee.trim(),
+          intake_periods: intake_periods.trim(),
+          proficiency_tests: proficiency_tests || [ ]
+        };
         await set(ref(db, `anisha/courses/${editingCourseId}`), payload);
+
+        // If multiple course names were added during edit, we can insert the other ones as new courses!
+        if (namesToSave.length > 1) {
+          const coursesRef = ref(db, 'anisha/courses');
+          for (let i = 1; i < namesToSave.length; i++) {
+            const extraPayload = {
+              ...payload,
+              course_name: namesToSave[i]
+            };
+            const newCourseRef = push(coursesRef);
+            await set(newCourseRef, extraPayload);
+          }
+        }
+
+        
         setEditingCourseId(null);
-        alert("Course successfully updated in Database!");
+        alert("Course(s) successfully updated!");
       } else {
-        const newCourseRef = push(coursesRef);
-        await set(newCourseRef, payload);
-        alert("Course successfully saved to Database!");
+        const coursesRef = ref(db, 'anisha/courses');
+        for (const name of namesToSave) {
+          const payload = {
+            university_name: university_name.trim(),
+            country: country.trim(),
+            course_name: name,
+            course_level: course_level.trim(),
+            minimum_education_level: minimum_education_level.trim(),
+            minimum_gpa: parseFloat(minimum_gpa) || 0,
+            duration: duration.trim(),
+            course_fee: course_fee.trim(),
+            intake_periods: intake_periods.trim(),
+            proficiency_tests: proficiency_tests || [ ]
+          };
+          const newCourseRef = push(coursesRef);
+          await set(newCourseRef, payload);
+        }
+        alert(`Successfully saved ${namesToSave.length} course(s)!`);
       }
+
 
       // Reset form on success
       setCourseForm({
         university_name: '',
         country: '',
         course_name: '',
+        course_names: [ ],
         course_level: '',
         minimum_education_level: '',
         minimum_gpa: '',
@@ -159,8 +230,8 @@ export default function AdminPortal({ courses }) {
     }
   };
 
-  // Delete course record
   const handleDeleteCourse = async (id) => {
+
     if (window.confirm("Are you sure you want to permanently delete this course requirement?")) {
       try {
         await remove(ref(db, `anisha/courses/${id}`));
@@ -188,6 +259,7 @@ export default function AdminPortal({ courses }) {
         >
           {editingCourseId ? 'Edit Course' : 'Add Course'}
         </button>
+        
         <button
           type="button"
           onClick={() => setMobileTab('database')}
@@ -197,8 +269,9 @@ export default function AdminPortal({ courses }) {
               : 'text-slate-600'
           }`}
         >
-          Course Database ({courses.length})
+          Courses List ({courses.length})
         </button>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -222,30 +295,76 @@ export default function AdminPortal({ courses }) {
               field="university_name"
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <AutocompleteInput
-                label="Country"
-                required
-                placeholder="e.g. Denmark"
-                value={courseForm.country}
-                onChange={(val) => setCourseForm({ ...courseForm, country: val })}
-                courses={courses}
-                field="country"
-              />
-              <AutocompleteInput
-                label="Course Name"
-                required
-                placeholder="e.g. Computer Science"
-                value={courseForm.course_name}
-                onChange={(val) => setCourseForm({ ...courseForm, course_name: val })}
-                courses={courses}
-                field="course_name"
-              />
+            
+            <AutocompleteInput
+              label="Country"
+              required
+              placeholder="e.g. Denmark"
+              value={courseForm.country}
+              onChange={(val) => setCourseForm({ ...courseForm, country: val })}
+              courses={courses}
+              field="country"
+            />
+
+            {/* Course Names Packet Sub-form */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div className="flex justify-between items-center mb-2">
+                <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Course Name(s) in Packet
+                </span>
+                {courseForm.course_names && courseForm.course_names.length > 0 && (
+                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                    {courseForm.course_names.length} Course(s)
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1">
+                  <AutocompleteInput
+                    placeholder="e.g. Computer Science"
+                    value={courseForm.course_name}
+                    onChange={(val) => setCourseForm({ ...courseForm, course_name: val })}
+                    courses={courses}
+                    field="course_name"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={addCourseName}
+                  className="px-3 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 flex items-center gap-1 transition shrink-0"
+                >
+                  <PlusCircle className="h-4 w-4" /> Add to Packet
+                </button>
+              </div>
+
+              {(!courseForm.course_names || courseForm.course_names.length === 0) ? (
+                <p className="text-[11px] text-slate-400 italic">No packet course names added yet. If you only have one course, just type it above; it will be saved automatically.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {courseForm.course_names.map((name, idx) => (
+                    <span 
+                      key={idx} 
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-indigo-100 rounded-full text-xs font-semibold text-indigo-700 shadow-sm"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeCourseName(idx)}
+                        className="text-slate-400 hover:text-red-500 font-bold ml-1 transition"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <AutocompleteInput
                 label="Course Level"
+
                 required
                 placeholder="e.g. Master Degree"
                 value={courseForm.course_level}
@@ -410,23 +529,25 @@ export default function AdminPortal({ courses }) {
           </form>
         </div>
 
+        
         {/* Database Display Records Panel */}
         <div className={`lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col h-[calc(100vh-220px)] min-h-[500px] ${mobileTab === 'database' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Database className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-800">Course Database ({courses.length})</h2>
+              <h2 className="text-lg font-bold text-slate-800">Courses List ({courses.length})</h2>
             </div>
           </div>
 
           {courses.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-12">
               <HelpCircle className="h-12 w-12 text-slate-300 mb-3 animate-pulse" />
-              <p className="font-semibold text-slate-500">Database is empty</p>
+              <p className="font-semibold text-slate-500">No courses found</p>
               <p className="text-xs text-slate-400 text-center max-w-xs mt-1">
-                Add course definitions using the entry form to store records directly in Firebase.
+                Please add new course requirements using the form.
               </p>
             </div>
+
           ) : (
             <div className="flex-1 overflow-y-auto space-y-3.5 pr-1">
               {courses.map((course) => (

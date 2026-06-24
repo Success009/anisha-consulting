@@ -79,10 +79,11 @@ function App() {
 
       {/* Main Screen Layout Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+        
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <RefreshCw className="h-10 w-10 text-indigo-500 animate-spin mb-4" />
-            <p className="text-slate-500 text-sm">Synchronizing with live database...</p>
+            <p className="text-slate-500 text-sm">Loading...</p>
           </div>
         ) : activeTab === 'admin' ? (
           <AdminPortal courses={courses} />
@@ -93,8 +94,9 @@ function App() {
 
       {/* footer signature bar */}
       <footer className="bg-white border-t border-slate-100 py-4 text-center text-xs text-slate-400">
-        Anisha Course Matcher System • Connected to real-time production server
+        © 2026 Anisha Consulting
       </footer>
+
     </div>
   );
 }
