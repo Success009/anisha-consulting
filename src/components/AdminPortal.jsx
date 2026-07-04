@@ -90,6 +90,14 @@ const getNormalizedTestsString = (tests) => {
     .join('|');
 };
 
+const getNormalizedGapGpaString = (gpaByGap) => {
+  const arr = Array.isArray(gpaByGap) ? gpaByGap : [ ];
+  return arr
+    .map(r => `${r.gap_years}:${r.minimum_gpa}`)
+    .sort()
+    .join('|');
+};
+
 // Helper function to group flat courses by all information fields except ID and course_name
 const groupCourses = (flatCourses) => {
   const groups = [ ];
@@ -108,8 +116,9 @@ const groupCourses = (flatCourses) => {
       const sameFee = getNormalizedFee(gFirst.course_fee) === getNormalizedFee(course.course_fee);
       const sameIntake = getNormalizedIntake(gFirst.intake_periods) === getNormalizedIntake(course.intake_periods);
       const sameTests = getNormalizedTestsString(gFirst.proficiency_tests) === getNormalizedTestsString(course.proficiency_tests);
+      const sameGapGpa = getNormalizedGapGpaString(gFirst.gpa_by_gap) === getNormalizedGapGpaString(course.gpa_by_gap);
 
-      return sameUni && sameCountry && sameLevel && sameMinEdu && sameGpa && sameDuration && sameFee && sameIntake && sameTests;
+      return sameUni && sameCountry && sameLevel && sameMinEdu && sameGpa && sameDuration && sameFee && sameIntake && sameTests && sameGapGpa;
     });
 
     if (matchingGroup) {
@@ -127,6 +136,7 @@ const groupCourses = (flatCourses) => {
         course_fee: course.course_fee,
         intake_periods: course.intake_periods,
         proficiency_tests: course.proficiency_tests,
+        gpa_by_gap: course.gpa_by_gap || [ ],
         courses: [course]
       });
     }
@@ -148,13 +158,15 @@ export default function AdminPortal({ courses }) {
     duration: '',
     course_fee: '',
     intake_periods: '',
-    proficiency_tests: [ ]
+    proficiency_tests: [ ],
+    gpa_by_gap: [ ]
   });
 
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [editingGroupCourseIds, setEditingGroupCourseIds] = useState([ ]);
   const [mobileTab, setMobileTab] = useState('form'); // 'form' or 'database'
   const [testInput, setTestInput] = useState({ test_name: 'IELTS', minimum_score: '' });
+  const [gapInput, setGapInput] = useState({ gap_years: '', minimum_gpa: '' });
 
     // Generate dynamic test name suggestions based on database + defaults
   const defaultTestNames = ['IELTS', 'PTE', 'TOEFL', 'DUOLINGO', 'MOI'];
@@ -206,7 +218,7 @@ export default function AdminPortal({ courses }) {
     setTestInput({ test_name: 'IELTS', minimum_score: '' });
   };
 
-  // Remove test requirement
+    // Remove test requirement
   const removeTestRequirement = (idx) => {
     setCourseForm(prev => ({
       ...prev,
@@ -214,7 +226,34 @@ export default function AdminPortal({ courses }) {
     }));
   };
 
-    // Trigger editing state for a course group
+  // Add Gap GPA Rule to local form state
+  const addGapRule = () => {
+    if (!gapInput.gap_years || !gapInput.minimum_gpa) return;
+    const yrs = parseInt(gapInput.gap_years) || 0;
+    const gpa = parseFloat(gapInput.minimum_gpa) || 0;
+    
+    // Avoid duplicate years rules
+    if ((courseForm.gpa_by_gap || [ ]).some(r => parseInt(r.gap_years) === yrs)) {
+      alert(`A rule for ${yrs} gap years already exists.`);
+      return;
+    }
+
+    setCourseForm(prev => ({
+      ...prev,
+      gpa_by_gap: [...(prev.gpa_by_gap || [ ]), { gap_years: yrs, minimum_gpa: gpa }].sort((a, b) => a.gap_years - b.gap_years)
+    }));
+    setGapInput({ gap_years: '', minimum_gpa: '' });
+  };
+
+  // Remove Gap GPA Rule
+  const removeGapRule = (idx) => {
+    setCourseForm(prev => ({
+      ...prev,
+      gpa_by_gap: (prev.gpa_by_gap || [ ]).filter((_, i) => i !== idx)
+    }));
+  };
+
+  // Trigger editing state for a course group
   const handleEditCourse = (group) => {
     setEditingCourseId(group.id);
     setEditingGroupCourseIds(group.courses.map(c => c.id));
@@ -229,7 +268,8 @@ export default function AdminPortal({ courses }) {
       duration: displayDuration(group.duration, group),
       course_fee: displayFee(group.course_fee),
       intake_periods: displayIntake(group.intake_periods),
-      proficiency_tests: group.proficiency_tests || [ ]
+      proficiency_tests: group.proficiency_tests || [ ],
+      gpa_by_gap: group.gpa_by_gap || [ ]
     });
     setMobileTab('form'); // Auto-switch to form on mobile so user can see it
   };
@@ -249,7 +289,8 @@ export default function AdminPortal({ courses }) {
       duration: '',
       course_fee: '',
       intake_periods: '',
-      proficiency_tests: [ ]
+      proficiency_tests: [ ],
+      gpa_by_gap: [ ]
     });
   };
 
@@ -267,7 +308,8 @@ export default function AdminPortal({ courses }) {
       duration, 
       course_fee, 
       intake_periods, 
-      proficiency_tests 
+      proficiency_tests,
+      gpa_by_gap
     } = courseForm;
 
     // Collect all course names to save
@@ -294,7 +336,8 @@ export default function AdminPortal({ courses }) {
           duration: duration.trim(),
           course_fee: course_fee.trim(),
           intake_periods: intake_periods.trim(),
-          proficiency_tests: proficiency_tests || [ ]
+          proficiency_tests: proficiency_tests || [ ],
+          gpa_by_gap: gpa_by_gap || [ ]
         };
 
         const originalIds = editingGroupCourseIds.length > 0 ? editingGroupCourseIds : [editingCourseId];
@@ -349,7 +392,8 @@ export default function AdminPortal({ courses }) {
             duration: duration.trim(),
             course_fee: course_fee.trim(),
             intake_periods: intake_periods.trim(),
-            proficiency_tests: proficiency_tests || [ ]
+            proficiency_tests: proficiency_tests || [ ],
+            gpa_by_gap: gpa_by_gap || [ ]
           };
           const newCourseRef = push(coursesRef);
           await set(newCourseRef, payload);
@@ -369,7 +413,8 @@ export default function AdminPortal({ courses }) {
         duration: '',
         course_fee: '',
         intake_periods: '',
-        proficiency_tests: [ ]
+        proficiency_tests: [ ],
+        gpa_by_gap: [ ]
       });
     } catch (err) {
       console.error(err);
@@ -536,7 +581,7 @@ export default function AdminPortal({ courses }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Minimum GPA Required
@@ -552,6 +597,63 @@ export default function AdminPortal({ courses }) {
                   onChange={(e) => setCourseForm({ ...courseForm, minimum_gpa: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
                 />
+
+                {/* GPA by Gap Rules sub form */}
+                <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    GPA Requirement by Gap Year
+                  </span>
+                  
+                  <div className="flex gap-1.5 mb-2">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Gap Yrs"
+                      value={gapInput.gap_years}
+                      onChange={(e) => setGapInput({ ...gapInput, gap_years: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:border-indigo-500 w-1/2"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="4"
+                      placeholder="Min GPA"
+                      value={gapInput.minimum_gpa}
+                      onChange={(e) => setGapInput({ ...gapInput, minimum_gpa: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs flex-1 focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={addGapRule}
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-0.5 transition shrink-0"
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" /> Add
+                    </button>
+                  </div>
+
+                  {(!courseForm.gpa_by_gap || courseForm.gpa_by_gap.length === 0) ? (
+                    <p className="text-[10px] text-slate-400 italic">No gap-dependent GPA rules (uses default GPA).</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {courseForm.gpa_by_gap.map((rule, idx) => (
+                        <span 
+                          key={idx} 
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-indigo-100 rounded-full text-[10px] font-semibold text-indigo-700 shadow-sm"
+                        >
+                          {rule.gap_years}+ Yrs Gap: GPA ≥ {rule.minimum_gpa}
+                          <button
+                            type="button"
+                            onClick={() => removeGapRule(idx)}
+                            className="text-slate-400 hover:text-red-500 font-bold ml-1 transition"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
@@ -762,10 +864,17 @@ export default function AdminPortal({ courses }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100/80 text-xs">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100/80 text-xs">
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-slate-400">Min GPA</span>
                       <span className="font-bold text-slate-700">{group.minimum_gpa}</span>
+                      {group.gpa_by_gap && group.gpa_by_gap.length > 0 && (
+                        <div className="text-[9px] text-indigo-600 font-semibold mt-0.5 space-y-0.5">
+                          {group.gpa_by_gap.map((rule, ri) => (
+                            <div key={ri}>{rule.gap_years}+ Yr Gap: ≥{rule.minimum_gpa}</div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-slate-400">Min Edu</span>

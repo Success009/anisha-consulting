@@ -38,11 +38,28 @@ export const evaluateAndRankCourses = (courses, studentProfile) => {
       reasons.push(`Target level mismatch: Student wants "${desired_apply_level}", course is "${course.course_level || 'N/A'}"`);
     }
 
-    // 2. Minimum GPA Limit (STRICT)
-    const minGpa = parseFloat(course.minimum_gpa) || 0;
+    // 2. Minimum GPA Limit (STRICT) - Dependent on Gap Years
+    let requiredGpa = parseFloat(course.minimum_gpa) || 0;
+    const studentGapVal = parseInt(studentProfile.gap_years || 0) || 0;
+    const rules = course.gpa_by_gap || [ ];
+    if (rules.length > 0) {
+      const applicableRules = rules.filter(r => studentGapVal >= parseInt(r.gap_years || 0));
+      if (applicableRules.length > 0) {
+        const activeRule = applicableRules.reduce((maxRule, currRule) => {
+          return parseInt(currRule.gap_years || 0) > parseInt(maxRule.gap_years || 0) ? currRule : maxRule;
+        }, applicableRules[0]);
+        requiredGpa = parseFloat(activeRule.minimum_gpa) || 0;
+      }
+    }
+
+    const minGpa = requiredGpa;
     if (studentGpaNum < minGpa) {
       isEliminated = true;
-      reasons.push(`GPA below requirement: Course requires minimum GPA of ${minGpa}, student has ${studentGpaNum}`);
+      if (minGpa !== (parseFloat(course.minimum_gpa) || 0)) {
+        reasons.push(`GPA below requirement: Course requires minimum GPA of ${minGpa} for ${studentGapVal} gap year(s), student has ${studentGpaNum}`);
+      } else {
+        reasons.push(`GPA below requirement: Course requires minimum GPA of ${minGpa}, student has ${studentGpaNum}`);
+      }
     }
 
     // 3. Minimum Completed Education Tier (STRICT)

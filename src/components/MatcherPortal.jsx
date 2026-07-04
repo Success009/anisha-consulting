@@ -41,7 +41,8 @@ export default function MatcherPortal({ courses }) {
     completed_education_level: '',
     desired_apply_level: '',
     test_results: [ ],
-    interested_countries: [''] // Init with one empty choice
+    interested_countries: [''], // Init with one empty choice
+    gap_years: '0'
   });
 
   const [studentTestInput, setStudentTestInput] = useState({ test_name: 'IELTS', score: '' });
@@ -159,43 +160,62 @@ export default function MatcherPortal({ courses }) {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Student's GPA
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4"
+              {/* Left Column: Education Path */}
+              <div className="space-y-4">
+                <AutocompleteInput
+                  label="Completed Education"
                   required
-                  placeholder="e.g. 3.25"
-                  value={studentProfile.gpa}
-                  onChange={(e) => setStudentProfile({ ...studentProfile, gpa: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                  placeholder="e.g. Plus 2 / Bachelor"
+                  value={studentProfile.completed_education_level}
+                  onChange={(val) => setStudentProfile({ ...studentProfile, completed_education_level: val })}
+                  courses={courses}
+                  field="minimum_education_level"
+                />
+                <AutocompleteInput
+                  label="Desired Study Level"
+                  required
+                  placeholder="e.g. Master Degree"
+                  value={studentProfile.desired_apply_level}
+                  onChange={(val) => setStudentProfile({ ...studentProfile, desired_apply_level: val })}
+                  courses={courses}
+                  field="course_level"
                 />
               </div>
 
-              <AutocompleteInput
-                label="Completed Education"
-                required
-                placeholder="e.g. Plus 2 / Bachelor"
-                value={studentProfile.completed_education_level}
-                onChange={(val) => setStudentProfile({ ...studentProfile, completed_education_level: val })}
-                courses={courses}
-                field="minimum_education_level"
-              />
+              {/* Right Column: Grades & Gap Years */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Student's GPA
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="4"
+                    required
+                    placeholder="e.g. 3.25"
+                    value={studentProfile.gpa}
+                    onChange={(e) => setStudentProfile({ ...studentProfile, gpa: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Gap Year (Years)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="e.g. 0"
+                    value={studentProfile.gap_years}
+                    onChange={(e) => setStudentProfile({ ...studentProfile, gap_years: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                  />
+                </div>
+              </div>
             </div>
-
-            <AutocompleteInput
-              label="Desired Study Level"
-              required
-              placeholder="e.g. Master Degree"
-              value={studentProfile.desired_apply_level}
-              onChange={(val) => setStudentProfile({ ...studentProfile, desired_apply_level: val })}
-              courses={courses}
-              field="course_level"
-            />
 
             {/* Language Skills sub form */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -403,10 +423,17 @@ export default function MatcherPortal({ courses }) {
                     {/* Criteria and scores breakdown if qualified */}
                     {!result.isEliminated && (
                       <>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100/80 text-xs">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100/80 text-xs">
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Req. GPA</span>
                             <span className="font-bold text-slate-700">{result.minimum_gpa}</span>
+                            {result.gpa_by_gap && result.gpa_by_gap.length > 0 && (
+                              <div className="text-[9px] text-indigo-600 font-semibold mt-0.5 space-y-0.5">
+                                {result.gpa_by_gap.map((rule, ri) => (
+                                  <div key={ri}>{rule.gap_years}+ Yr Gap: ≥{rule.minimum_gpa}</div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Req. Edu</span>
