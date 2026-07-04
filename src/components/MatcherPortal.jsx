@@ -15,6 +15,26 @@ import {
 import AutocompleteInput from './AutocompleteInput';
 import { evaluateAndRankCourses } from '../utils/matchingAlgorithm';
 
+// Helper functions for safe rendering of legacy data structures
+const displayFee = (fee) => {
+  if (fee === undefined || fee === null) return 'N/A';
+  if (typeof fee === 'object') {
+    if (fee.amount !== undefined && fee.currency !== undefined) {
+      return `${fee.amount} ${fee.currency}`;
+    }
+    return JSON.stringify(fee);
+  }
+  return String(fee);
+};
+
+const displayIntake = (intake) => {
+  if (intake === undefined || intake === null) return 'N/A';
+  if (Array.isArray(intake)) {
+    return intake.join(', ');
+  }
+  return String(intake);
+};
+
 export default function MatcherPortal({ courses }) {
   const [studentProfile, setStudentProfile] = useState({
     gpa: '',
@@ -396,11 +416,11 @@ export default function MatcherPortal({ courses }) {
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Fee</span>
-                            <span className="font-bold text-emerald-600">{result.course_fee}</span>
+                            <span className="font-bold text-emerald-600">{displayFee(result.course_fee)}</span>
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Intakes</span>
-                            <span className="font-semibold text-slate-700">{result.intake_periods}</span>
+                            <span className="font-semibold text-slate-700">{displayIntake(result.intake_periods)}</span>
                           </div>
                         </div>
 

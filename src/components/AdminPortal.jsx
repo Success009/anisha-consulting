@@ -13,6 +13,83 @@ import AutocompleteInput from './AutocompleteInput';
 import { ref, push, set, remove } from 'firebase/database';
 import { db } from '../firebase';
 
+
+// Helper functions for safe formatting and robust backward-compatible operations
+const getNormalizedFee = (fee) => {
+  if (fee === undefined || fee === null) return '';
+  if (typeof fee === 'object') {
+    if (fee.amount !== undefined && fee.currency !== undefined) {
+      return `${fee.amount} ${fee.currency}`.trim().toLowerCase();
+    }
+    return JSON.stringify(fee).trim().toLowerCase();
+  }
+  return String(fee).trim().toLowerCase();
+};
+
+const displayFee = (fee) => {
+  if (fee === undefined || fee === null) return 'N/A';
+  if (typeof fee === 'object') {
+    if (fee.amount !== undefined && fee.currency !== undefined) {
+      return `${fee.amount} ${fee.currency}`;
+    }
+    return JSON.stringify(fee);
+  }
+  return String(fee);
+};
+
+const getNormalizedDuration = (duration, course) => {
+  let d = duration;
+  if (d === undefined || d === null || d === '') {
+    if (course && course.duration_months !== undefined) {
+      d = course.duration_months;
+    }
+  }
+  if (d === undefined || d === null) return '';
+  if (typeof d === 'number') {
+    return `${d} months`.trim().toLowerCase();
+  }
+  return String(d).trim().toLowerCase();
+};
+
+const displayDuration = (duration, course) => {
+  let d = duration;
+  if (d === undefined || d === null || d === '') {
+    if (course && course.duration_months !== undefined) {
+      d = course.duration_months;
+    }
+  }
+  if (d === undefined || d === null || d === '') return 'N/A';
+  if (typeof d === 'number') {
+    return `${d} Months`;
+  }
+  return String(d);
+};
+
+const getNormalizedIntake = (intake) => {
+  if (intake === undefined || intake === null) return '';
+  if (Array.isArray(intake)) {
+    return intake.map(i => String(i).trim().toLowerCase()).join(', ').trim().toLowerCase();
+  }
+  return String(intake).trim().toLowerCase();
+};
+
+const displayIntake = (intake) => {
+  if (intake === undefined || intake === null) return 'N/A';
+  if (Array.isArray(intake)) {
+    return intake.join(', ');
+  }
+  return String(intake);
+};
+
+const getNormalizedTestsString = (tests) => {
+  const arr = Array.isArray(tests) ? tests : [ ];
+  return arr
+    .filter(t => t && t.test_name)
+    .map(t => `${String(t.test_name).trim().toUpperCase()}:${String(t.minimum_score || '').trim().toUpperCase()}`)
+    .sort()
+    .join('|');
+};
+
 // Helper function to group flat courses by all information fields except ID and course_name
 const groupCourses = (flatCourses) => {
   const groups = [ ];
@@ -26,18 +103,11 @@ const groupCourses = (flatCourses) => {
       const sameLevel = (gFirst.course_level || '').trim().toLowerCase() === (course.course_level || '').trim().toLowerCase();
       const sameMinEdu = (gFirst.minimum_education_level || '').trim().toLowerCase() === (course.minimum_education_level || '').trim().toLowerCase();
       const sameGpa = parseFloat(gFirst.minimum_gpa || 0) === parseFloat(course.minimum_gpa || 0);
-      const sameDuration = (gFirst.duration || '').trim().toLowerCase() === (course.duration || '').trim().toLowerCase();
-      const sameFee = (gFirst.course_fee || '').trim().toLowerCase() === (course.course_fee || '').trim().toLowerCase();
-      const sameIntake = (gFirst.intake_periods || '').trim().toLowerCase() === (course.intake_periods || '').trim().toLowerCase();
 
-      const tests1 = gFirst.proficiency_tests || [ ];
-      const tests2 = course.proficiency_tests || [ ];
-      let sameTests = false;
-      if (tests1.length === tests2.length) {
-        const str1 = tests1.map(t => `${(t.test_name || '').trim().toUpperCase()}:${(t.minimum_score || '').trim().toUpperCase()}`).sort();
-        const str2 = tests2.map(t => `${(t.test_name || '').trim().toUpperCase()}:${(t.minimum_score || '').trim().toUpperCase()}`).sort();
-        sameTests = str1.every((val, i) => val === str2[i]);
-      }
+      const sameDuration = getNormalizedDuration(gFirst.duration, gFirst) === getNormalizedDuration(course.duration, course);
+      const sameFee = getNormalizedFee(gFirst.course_fee) === getNormalizedFee(course.course_fee);
+      const sameIntake = getNormalizedIntake(gFirst.intake_periods) === getNormalizedIntake(course.intake_periods);
+      const sameTests = getNormalizedTestsString(gFirst.proficiency_tests) === getNormalizedTestsString(course.proficiency_tests);
 
       return sameUni && sameCountry && sameLevel && sameMinEdu && sameGpa && sameDuration && sameFee && sameIntake && sameTests;
     });
@@ -53,6 +123,7 @@ const groupCourses = (flatCourses) => {
         minimum_education_level: course.minimum_education_level,
         minimum_gpa: course.minimum_gpa,
         duration: course.duration,
+        duration_months: course.duration_months,
         course_fee: course.course_fee,
         intake_periods: course.intake_periods,
         proficiency_tests: course.proficiency_tests,
@@ -63,6 +134,7 @@ const groupCourses = (flatCourses) => {
 
   return groups;
 };
+
 
 export default function AdminPortal({ courses }) {
   const [courseForm, setCourseForm] = useState({
@@ -154,9 +226,9 @@ export default function AdminPortal({ courses }) {
       course_level: group.course_level || '',
       minimum_education_level: group.minimum_education_level || '',
       minimum_gpa: group.minimum_gpa !== undefined ? String(group.minimum_gpa) : '',
-      duration: group.duration || '',
-      course_fee: group.course_fee || '',
-      intake_periods: group.intake_periods || '',
+      duration: displayDuration(group.duration, group),
+      course_fee: displayFee(group.course_fee),
+      intake_periods: displayIntake(group.intake_periods),
       proficiency_tests: group.proficiency_tests || [ ]
     });
     setMobileTab('form'); // Auto-switch to form on mobile so user can see it
@@ -703,11 +775,11 @@ export default function AdminPortal({ courses }) {
                     </div>
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-slate-400">Duration</span>
-                      <span className="font-semibold text-slate-700">{group.duration}</span>
+                      <span className="font-semibold text-slate-700">{displayDuration(group.duration, group)}</span>
                     </div>
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-slate-400">Fees</span>
-                      <span className="font-bold text-emerald-600">{group.course_fee}</span>
+                      <span className="font-bold text-emerald-600">{displayFee(group.course_fee)}</span>
                     </div>
                   </div>
 
@@ -725,7 +797,7 @@ export default function AdminPortal({ courses }) {
                       ))
                     )}
                     <span className="ml-auto text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                      Intake: {group.intake_periods}
+                      Intake: {displayIntake(group.intake_periods)}
                     </span>
                   </div>
                 </div>
