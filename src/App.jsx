@@ -17,12 +17,15 @@ function App() {
     const unsubscribe = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        
         const loadedCourses = Object.entries(data).map(([id, val]) => ({
           id,
           ...val,
           proficiency_tests: val.proficiency_tests || [ ],
+          gpa_by_gap: val.gpa_by_gap || [ ],
         }));
         setCourses(loadedCourses);
+
       } else {
         setCourses([ ]);
       }

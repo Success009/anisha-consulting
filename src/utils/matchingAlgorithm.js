@@ -38,21 +38,27 @@ export const evaluateAndRankCourses = (courses, studentProfile) => {
       reasons.push(`Target level mismatch: Student wants "${desired_apply_level}", course is "${course.course_level || 'N/A'}"`);
     }
 
+    
     // 2. Minimum GPA Limit (STRICT) - Dependent on Gap Years
     let requiredGpa = parseFloat(course.minimum_gpa) || 0;
     const studentGapVal = parseInt(studentProfile.gap_years || 0) || 0;
     const rules = course.gpa_by_gap || [ ];
     if (rules.length > 0) {
-      const applicableRules = rules.filter(r => studentGapVal >= parseInt(r.gap_years || 0));
+      const applicableRules = rules.filter(r => {
+        const ruleGapYrs = r.gap_years === '' || r.gap_years === undefined || r.gap_years === null ? 0 : parseInt(r.gap_years);
+        return studentGapVal >= ruleGapYrs;
+      });
       if (applicableRules.length > 0) {
         const activeRule = applicableRules.reduce((maxRule, currRule) => {
-          return parseInt(currRule.gap_years || 0) > parseInt(maxRule.gap_years || 0) ? currRule : maxRule;
+          const maxYrs = maxRule.gap_years === '' || maxRule.gap_years === undefined || maxRule.gap_years === null ? 0 : parseInt(maxRule.gap_years);
+          const currYrs = currRule.gap_years === '' || currRule.gap_years === undefined || currRule.gap_years === null ? 0 : parseInt(currRule.gap_years);
+          return currYrs > maxYrs ? currRule : maxRule;
         }, applicableRules[0]);
         requiredGpa = parseFloat(activeRule.minimum_gpa) || 0;
       }
     }
-
     const minGpa = requiredGpa;
+
     if (studentGpaNum < minGpa) {
       isEliminated = true;
       if (minGpa !== (parseFloat(course.minimum_gpa) || 0)) {

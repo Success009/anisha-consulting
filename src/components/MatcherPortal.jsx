@@ -425,18 +425,24 @@ export default function MatcherPortal({ courses }) {
                       <>
                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100/80 text-xs">
                           <div>
+                            
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Req. GPA</span>
-                            <span className="font-bold text-slate-700">{result.minimum_gpa}</span>
+                            <span className="font-bold text-slate-700">
+                              {result.minimum_gpa === '' || result.minimum_gpa === undefined || result.minimum_gpa === null ? 0 : result.minimum_gpa}
+                            </span>
                             {result.gpa_by_gap && result.gpa_by_gap.length > 0 && (
                               <div className="text-[9px] text-indigo-600 font-semibold mt-0.5 space-y-0.5">
                                 {result.gpa_by_gap.map((rule, ri) => (
-                                  <div key={ri}>{rule.gap_years}+ Yr Gap: ≥{rule.minimum_gpa}</div>
+                                  <div key={ri}>
+                                    {rule.gap_years === '' || rule.gap_years === undefined || rule.gap_years === null ? 'No Limit Gap' : `${rule.gap_years}+ Yr Gap`}: ≥{rule.minimum_gpa === '' || rule.minimum_gpa === undefined || rule.minimum_gpa === null ? 0 : rule.minimum_gpa}
+                                  </div>
                                 ))}
                               </div>
                             )}
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-slate-400">Req. Edu</span>
+
                             <span className="font-semibold text-slate-700 truncate block" title={result.minimum_education_level}>
                               {result.minimum_education_level}
                             </span>
