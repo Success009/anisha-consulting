@@ -599,7 +599,8 @@ export default function AdminPortal({ courses }) {
             </div>
 
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Minimum GPA Required
@@ -614,69 +615,11 @@ export default function AdminPortal({ courses }) {
                   onChange={(e) => setCourseForm({ ...courseForm, minimum_gpa: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
                 />
-
-                {/* GPA by Gap Rules sub form */}
-                <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    GPA Requirement by Gap Year
-                  </span>
-
-                  <div className="flex gap-1.5 mb-2">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Gap Yrs (blank = No Limit)"
-                      value={gapInput.gap_years}
-                      onChange={(e) => setGapInput({ ...gapInput, gap_years: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:border-indigo-500 w-1/2"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="4"
-                      placeholder="Min GPA (blank = 0)"
-                      value={gapInput.minimum_gpa}
-                      onChange={(e) => setGapInput({ ...gapInput, minimum_gpa: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs flex-1 focus:outline-none focus:border-indigo-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={addGapRule}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-0.5 transition shrink-0"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" /> Add
-                    </button>
-                  </div>
-
-                  {(!courseForm.gpa_by_gap || courseForm.gpa_by_gap.length === 0) ? (
-                    <p className="text-[10px] text-slate-400 italic">No gap-dependent GPA rules (uses default GPA).</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {courseForm.gpa_by_gap.map((rule, idx) => (
-                        <span 
-                          key={idx} 
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-indigo-100 rounded-full text-[10px] font-semibold text-indigo-700 shadow-sm"
-                        >
-                          {rule.gap_years === '' || rule.gap_years === undefined || rule.gap_years === null ? 'No Limit Gap' : `${rule.gap_years}+ Yrs Gap`}: GPA ≥ {rule.minimum_gpa === '' || rule.minimum_gpa === undefined || rule.minimum_gpa === null ? 0 : rule.minimum_gpa}
-                          <button
-                            type="button"
-                            onClick={() => removeGapRule(idx)}
-                            className="text-slate-400 hover:text-red-500 font-bold ml-1 transition"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Course Duration
                 </label>
-
                 <input
                   type="text"
                   placeholder="e.g. 2 Years"
@@ -688,11 +631,73 @@ export default function AdminPortal({ courses }) {
               </div>
             </div>
 
+            {/* GPA by Gap Rules sub form */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+              <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                GPA Requirement by Gap Year
+              </span>
+
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Gap Yrs (blank = No Limit)"
+                    value={gapInput.gap_years}
+                    onChange={(e) => setGapInput({ ...gapInput, gap_years: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm bg-white"
+                  />
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="4"
+                    placeholder="Min GPA Required (blank = 0)"
+                    value={gapInput.minimum_gpa}
+                    onChange={(e) => setGapInput({ ...gapInput, minimum_gpa: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={addGapRule}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" /> Add Rule
+                </button>
+              </div>
+
+              {(!courseForm.gpa_by_gap || courseForm.gpa_by_gap.length === 0) ? (
+                <p className="text-xs text-slate-400 italic">No gap-dependent GPA rules (uses default GPA).</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {courseForm.gpa_by_gap.map((rule, idx) => (
+                    <span 
+                      key={idx} 
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-indigo-100 rounded-full text-xs font-semibold text-indigo-700 shadow-sm"
+                    >
+                      {rule.gap_years === '' || rule.gap_years === undefined || rule.gap_years === null ? 'No Limit Gap' : `${rule.gap_years}+ Yrs Gap`}: GPA ≥ {rule.minimum_gpa === '' || rule.minimum_gpa === undefined || rule.minimum_gpa === null ? 0 : rule.minimum_gpa}
+                      <button
+                        type="button"
+                        onClick={() => removeGapRule(idx)}
+                        className="text-slate-400 hover:text-red-500 font-bold ml-1.5 transition"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Course Fee
                 </label>
+
                 <input
                   type="text"
                   placeholder="e.g. 15,000 EUR/Yr"
