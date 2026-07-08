@@ -1,16 +1,17 @@
-# Automated Build & Push Script Documentation
+# Automated Build, Deploy, and Push Script Documentation
 
-This project includes a shell utility script, `compile_and_push.sh`, designed to automate the process of building, verifying, and committing/pushing changes to GitHub. This eliminates the need for developers (or subsequent AI agents) to manually run compile commands, verify build success, and type out repetitive Git commands.
+This project includes a shell utility script, `compile_and_push.sh`, designed to automate the process of building, deploying to GitHub Pages, and pushing source changes to GitHub. This eliminates the need for developers (or subsequent AI agents) to manually run compile commands, verify build success, deploy static assets, and type out repetitive Git commands.
 
 ## How the Script Works
 
 The `compile_and_push.sh` script executes the following sequential steps:
 
-1. **Compilation Check:** Runs `npm run build` using the project's Vite bundler.
-2. **Build Failure Prevention:** If the build fails (exits with non-zero status), the script aborts immediately to prevent bad/broken code from being pushed to the remote repository.
-3. **Git Staging:** If the build succeeds, it automatically stages all changes with `git add .`.
-4. **Git Committing:** Automatically commits the staged changes with a timestamped message: `Auto-compile check and deploy: YYYY-MM-DD HH:MM:SS`.
-5. **Git Push:** Executes `git push` to push the certified, successfully built code directly to your GitHub repository.
+1. **Compilation Check:** Runs `npm run build` using the project's Vite bundler to verify there are no compilation errors.
+2. **Auto-Deployment:** If the compilation is successful, it runs `npm run deploy` (which triggers `gh-pages -d dist`) to deploy the production build to the `gh-pages` branch. This triggers the GitHub Pages deployment process on GitHub, which hosts your live site at `anisha.success0.com.np`.
+3. **Build Failure Prevention:** If the build or deploy fails, the script aborts immediately to prevent bad/broken code from being pushed to the remote repository.
+4. **Git Staging:** Stages all source changes with `git add .`.
+5. **Git Committing:** Commits the staged source changes with a timestamped message: `Auto-compile check and deploy: YYYY-MM-DD HH:MM:SS`.
+6. **Git Push:** Executes `git push` to push the certified source code directly to the `main` branch of your GitHub repository.
 
 ## Instructions for Use
 
@@ -27,8 +28,8 @@ Simply execute the script from the root of the project directory:
 ```
 
 ### 3. Usage by AI Agents
-Subsequent AI models or local agents working on this project do not need to run `npm run build` manually or run individual git commands. They can directly invoke:
+Subsequent AI models or local agents working on this project do not need to run `npm run build` or `npm run deploy` manually. They can directly invoke:
 ```bash
 ./compile_and_push.sh
 ```
-If the script succeeds, they can be confident that the code builds correctly and has been pushed to GitHub.
+If the script succeeds, they can be confident that the code builds, is live, and has been pushed to both `main` and `gh-pages` branches on GitHub.
